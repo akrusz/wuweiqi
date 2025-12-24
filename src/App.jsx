@@ -20,7 +20,6 @@ function App() {
               fill="#1a1a1a"
             />
             <circle cx="50" cy="26" r="8" fill="#f5f5f0" />
-            <circle cx="50" cy="74" r="8" fill="#1a1a1a" />
           </svg>
         </div>
         <h1>无为棋</h1>
@@ -81,7 +80,7 @@ function App() {
       <section>
         <h2>Solo Mode</h2>
         <p>
-          Place all 20 stones on the board. Try to minimize your total moves
+          Place all 15 stones on the board. Try to minimize your total moves
           by learning the hidden rules quickly.
         </p>
       </section>

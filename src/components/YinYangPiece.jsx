@@ -70,11 +70,8 @@ const YinYangPiece = ({
           fill="#1a1a1a"
         />
 
-        {/* White dot in black (yin) section - this is the "eye" that points to orientation */}
+        {/* White dot in black (yin) section - this is the "eye" that indicates orientation */}
         <circle cx="50" cy="26" r="8" fill="#f5f5f0" />
-
-        {/* Black dot in white (yang) section */}
-        <circle cx="50" cy="74" r="8" fill="#1a1a1a" />
       </svg>
 
       {/* Result indicator */}

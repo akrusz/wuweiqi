@@ -7,16 +7,18 @@ const Board = ({
   previewOrientation,
   lastMove, // { row, col, result: 'valid'|'invalid' }
   disabled = false,
+  pendingPlacement = null, // { row, col, orientation }
 }) => {
   const renderCell = (row, col) => {
     const piece = board[row][col];
     const isLastMove = lastMove && lastMove.row === row && lastMove.col === col;
     const result = isLastMove ? lastMove.result : null;
+    const isPending = pendingPlacement && pendingPlacement.row === row && pendingPlacement.col === col;
 
     return (
       <div
         key={`${row}-${col}`}
-        className={`board-cell ${piece ? 'occupied' : 'empty'} ${disabled ? 'disabled' : ''}`}
+        className={`board-cell ${piece ? 'occupied' : 'empty'} ${disabled ? 'disabled' : ''} ${isPending ? 'pending' : ''}`}
         onClick={() => !disabled && !piece && onCellClick(row, col)}
       >
         {/* Grid intersection point */}
@@ -39,8 +41,17 @@ const Board = ({
           />
         )}
 
-        {/* Hover preview for empty cells */}
-        {!piece && !disabled && (
+        {/* Pending placement piece */}
+        {isPending && (
+          <YinYangPiece
+            orientation={pendingPlacement.orientation}
+            size={36}
+            className="pending-piece"
+          />
+        )}
+
+        {/* Hover preview for empty cells (only when not in pending mode) */}
+        {!piece && !disabled && !pendingPlacement && (
           <div className="hover-preview">
             <YinYangPiece
               orientation={previewOrientation}
