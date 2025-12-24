@@ -556,6 +556,119 @@
   color: var(--accent);
 }
 
+/* ==================== PLACEMENT CONFIRMATION UI ==================== */
+.placement-confirm-ui {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--bg-medium);
+  border-radius: 12px;
+  animation: slideUp 0.2s ease;
+}
+
+.pending-piece-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.orientation-label {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.rotate-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--bg-light);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.rotate-btn:hover {
+  background: var(--accent);
+  color: var(--bg-dark);
+  transform: scale(1.1);
+}
+
+.rotate-btn:active {
+  transform: scale(0.95);
+}
+
+.confirm-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--valid);
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  box-shadow: 0 4px 15px rgba(90, 159, 90, 0.4);
+}
+
+.confirm-btn:hover {
+  background: #4a8f4a;
+  transform: scale(1.1);
+}
+
+.confirm-btn:active {
+  transform: scale(0.95);
+}
+
+.cancel-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid var(--invalid);
+  color: var(--invalid);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.cancel-btn:hover {
+  background: var(--invalid);
+  color: white;
+}
+
+/* Pending piece on board */
+.board-cell.pending {
+  z-index: 20;
+}
+
+.yin-yang-piece.pending-piece {
+  animation: pulse 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(201, 168, 108, 0.6));
+}
+
 /* ==================== YIN YANG PIECE ==================== */
 .yin-yang-piece {
   position: relative;

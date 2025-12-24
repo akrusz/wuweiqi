@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Board from './Board';
-import { PlacementPreview } from './YinYangPiece';
+import YinYangPiece, { PlacementPreview } from './YinYangPiece';
 import { BOARD_SIZE, selectRules, isMoveLegal, getHint } from '../rules';
 
-const INITIAL_STONES = 20;
+const INITIAL_STONES = 15;
 
 const createEmptyBoard = () =>
   Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
@@ -14,6 +14,9 @@ const Game = ({ mode = 'solo', onExit }) => {
   const [rules, setRules] = useState([]);
   const [orientation, setOrientation] = useState(0); // Current piece orientation
   const [lastMove, setLastMove] = useState(null);
+
+  // Pending placement for mobile UI
+  const [pendingPlacement, setPendingPlacement] = useState(null); // { row, col, orientation }
 
   // Player state
   const [currentPlayer, setCurrentPlayer] = useState(1); // 1 or 2
@@ -43,37 +46,69 @@ const Game = ({ mode = 'solo', onExit }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'r' || e.key === 'R') {
-        rotateOrientation();
+        if (pendingPlacement) {
+          rotatePending(1);
+        } else {
+          rotateOrientation();
+        }
       }
       if (e.key === 'Escape') {
-        onExit?.();
+        if (pendingPlacement) {
+          cancelPlacement();
+        } else {
+          onExit?.();
+        }
+      }
+      if (e.key === 'Enter' && pendingPlacement) {
+        confirmPlacement();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [orientation, onExit]);
+  }, [orientation, onExit, pendingPlacement]);
 
   const rotateOrientation = useCallback(() => {
     setOrientation((prev) => (prev + 1) % 4);
+  }, []);
+
+  const rotatePending = useCallback((direction) => {
+    if (pendingPlacement) {
+      setPendingPlacement(prev => ({
+        ...prev,
+        orientation: (prev.orientation + direction + 4) % 4
+      }));
+    }
+  }, [pendingPlacement]);
+
+  const cancelPlacement = useCallback(() => {
+    setPendingPlacement(null);
   }, []);
 
   const getCurrentStones = () =>
     currentPlayer === 1 ? player1Stones : player2Stones;
 
   const handleCellClick = (row, col) => {
-    if (gameOver || board[row][col]) return;
+    if (gameOver || board[row][col] || pendingPlacement) return;
 
     const stones = getCurrentStones();
     if (stones <= 0) return;
 
-    const legal = isMoveLegal(row, col, orientation, rules, board);
+    // Set pending placement instead of immediately checking
+    setPendingPlacement({ row, col, orientation });
+  };
+
+  const confirmPlacement = () => {
+    if (!pendingPlacement) return;
+
+    const { row, col, orientation: placementOrientation } = pendingPlacement;
+    const legal = isMoveLegal(row, col, placementOrientation, rules, board);
 
     // Record move
     const move = {
       row,
       col,
-      orientation,
+      orientation: placementOrientation,
       player: currentPlayer,
       legal,
       timestamp: Date.now(),
@@ -84,7 +119,7 @@ const Game = ({ mode = 'solo', onExit }) => {
       // Place the piece
       const newBoard = board.map((r, ri) =>
         r.map((c, ci) =>
-          ri === row && ci === col ? { orientation } : c
+          ri === row && ci === col ? { orientation: placementOrientation } : c
         )
       );
       setBoard(newBoard);
@@ -132,7 +167,8 @@ const Game = ({ mode = 'solo', onExit }) => {
     // Show feedback
     setLastMove({ row, col, result: legal ? 'valid' : 'invalid' });
 
-    // Clear feedback after animation
+    // Clear pending and feedback after animation
+    setPendingPlacement(null);
     setTimeout(() => {
       setLastMove(null);
     }, 1000);
@@ -149,6 +185,7 @@ const Game = ({ mode = 'solo', onExit }) => {
     setRules(selectRules(0.25, 0.5));
     setOrientation(0);
     setLastMove(null);
+    setPendingPlacement(null);
     setCurrentPlayer(1);
     setPlayer1Stones(INITIAL_STONES);
     setPlayer2Stones(INITIAL_STONES);
@@ -200,7 +237,7 @@ const Game = ({ mode = 'solo', onExit }) => {
           )}
 
           <PlacementPreview
-            orientation={orientation}
+            orientation={pendingPlacement ? pendingPlacement.orientation : orientation}
             onRotate={rotateOrientation}
             stonesRemaining={getCurrentStones()}
           />
@@ -212,13 +249,59 @@ const Game = ({ mode = 'solo', onExit }) => {
             onCellClick={handleCellClick}
             previewOrientation={orientation}
             lastMove={lastMove}
-            disabled={gameOver}
+            disabled={gameOver || !!pendingPlacement}
+            pendingPlacement={pendingPlacement}
           />
 
-          {/* Current orientation indicator */}
-          <div className="orientation-indicator">
-            Pointing: <strong>{getOrientationName(orientation)}</strong>
-          </div>
+          {/* Placement confirmation UI */}
+          {pendingPlacement && (
+            <div className="placement-confirm-ui">
+              <button
+                className="rotate-btn rotate-left"
+                onClick={() => rotatePending(-1)}
+                aria-label="Rotate counter-clockwise"
+              >
+                ↺
+              </button>
+              <div className="pending-piece-display">
+                <YinYangPiece
+                  orientation={pendingPlacement.orientation}
+                  size={50}
+                />
+                <span className="orientation-label">
+                  {getOrientationName(pendingPlacement.orientation)}
+                </span>
+              </div>
+              <button
+                className="rotate-btn rotate-right"
+                onClick={() => rotatePending(1)}
+                aria-label="Rotate clockwise"
+              >
+                ↻
+              </button>
+              <button
+                className="confirm-btn"
+                onClick={confirmPlacement}
+                aria-label="Confirm placement"
+              >
+                ✓
+              </button>
+              <button
+                className="cancel-btn"
+                onClick={cancelPlacement}
+                aria-label="Cancel placement"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Current orientation indicator (hidden when placing) */}
+          {!pendingPlacement && (
+            <div className="orientation-indicator">
+              Pointing: <strong>{getOrientationName(orientation)}</strong>
+            </div>
+          )}
         </div>
 
         <aside className="game-sidebar right">
