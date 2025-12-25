@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Board from './Board';
 import YinYangPiece, { PlacementPreview } from './YinYangPiece';
 import { BOARD_SIZE, selectRules, isMoveLegal, getHint } from '../rules';
@@ -12,11 +12,14 @@ const Game = ({ mode = 'solo', onExit }) => {
   // Game state
   const [board, setBoard] = useState(createEmptyBoard());
   const [rules, setRules] = useState([]);
-  const [orientation, setOrientation] = useState(0); // Current piece orientation
+  const [rotationCount, setRotationCount] = useState(0); // Cumulative rotation count for smooth animation
   const [lastMove, setLastMove] = useState(null);
 
   // Pending placement for mobile UI
-  const [pendingPlacement, setPendingPlacement] = useState(null); // { row, col, orientation }
+  const [pendingPlacement, setPendingPlacement] = useState(null); // { row, col, rotationCount }
+
+  // Computed orientation (0-3) from rotation count
+  const orientation = ((rotationCount % 4) + 4) % 4;
 
   // Player state
   const [currentPlayer, setCurrentPlayer] = useState(1); // 1 or 2
@@ -35,11 +38,86 @@ const Game = ({ mode = 'solo', onExit }) => {
   // Move history for feedback
   const [moveHistory, setMoveHistory] = useState([]);
 
+  // Refs for connecting lines
+  const boardAreaRef = useRef(null);
+  const controlPanelPieceRef = useRef(null);
+  const [linePositions, setLinePositions] = useState(null);
+
   // Initialize game
   useEffect(() => {
     const selectedRules = selectRules(0.25, 0.5);
     setRules(selectedRules);
     console.log('Hidden rules:', selectedRules.map(r => r.name)); // Debug only
+  }, []);
+
+  // Calculate connecting line positions
+  useEffect(() => {
+    if (!pendingPlacement || !boardAreaRef.current || !controlPanelPieceRef.current) {
+      setLinePositions(null);
+      return;
+    }
+
+    const updatePositions = () => {
+      const boardArea = boardAreaRef.current;
+      const controlPiece = controlPanelPieceRef.current;
+
+      // Find the pending cell on the board
+      const pendingCell = boardArea.querySelector('.board-cell.pending');
+      if (!pendingCell || !controlPiece) {
+        setLinePositions(null);
+        return;
+      }
+
+      const boardRect = boardArea.getBoundingClientRect();
+      const cellRect = pendingCell.getBoundingClientRect();
+      const controlRect = controlPiece.getBoundingClientRect();
+
+      // Calculate positions relative to the board area
+      const cellCenterX = cellRect.left + cellRect.width / 2 - boardRect.left;
+      const cellCenterY = cellRect.top + cellRect.height / 2 - boardRect.top;
+      const cellRadius = 18; // Half of 36px piece
+
+      const controlCenterX = controlRect.left + controlRect.width / 2 - boardRect.left;
+      const controlCenterY = controlRect.top + controlRect.height / 2 - boardRect.top;
+      const controlRadius = 25; // Half of 50px piece
+
+      // Single line connecting centers
+      setLinePositions({
+        boardRect,
+        line: {
+          x1: cellCenterX,
+          y1: cellCenterY,
+          x2: controlCenterX,
+          y2: controlCenterY,
+        },
+      });
+    };
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(updatePositions, 50);
+    window.addEventListener('resize', updatePositions);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updatePositions);
+    };
+  }, [pendingPlacement]);
+
+  const rotateOrientation = useCallback((direction = 1) => {
+    setRotationCount((prev) => prev + direction);
+  }, []);
+
+  const rotatePending = useCallback((direction) => {
+    setPendingPlacement(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rotationCount: prev.rotationCount + direction
+      };
+    });
+  }, []);
+
+  const cancelPlacement = useCallback(() => {
+    setPendingPlacement(null);
   }, []);
 
   // Keyboard controls
@@ -66,42 +144,32 @@ const Game = ({ mode = 'solo', onExit }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [orientation, onExit, pendingPlacement]);
-
-  const rotateOrientation = useCallback(() => {
-    setOrientation((prev) => (prev + 1) % 4);
-  }, []);
-
-  const rotatePending = useCallback((direction) => {
-    if (pendingPlacement) {
-      setPendingPlacement(prev => ({
-        ...prev,
-        orientation: (prev.orientation + direction + 4) % 4
-      }));
-    }
-  }, [pendingPlacement]);
-
-  const cancelPlacement = useCallback(() => {
-    setPendingPlacement(null);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlacement, onExit, rotatePending, rotateOrientation, cancelPlacement]);
 
   const getCurrentStones = () =>
     currentPlayer === 1 ? player1Stones : player2Stones;
 
   const handleCellClick = (row, col) => {
-    if (gameOver || board[row][col] || pendingPlacement) return;
+    if (gameOver || board[row][col]) return;
 
     const stones = getCurrentStones();
     if (stones <= 0) return;
 
-    // Set pending placement instead of immediately checking
-    setPendingPlacement({ row, col, orientation });
+    // If there's already a pending placement, move it to the new cell (keep current rotation)
+    if (pendingPlacement) {
+      setPendingPlacement(prev => ({ ...prev, row, col }));
+    } else {
+      // Set new pending placement
+      setPendingPlacement({ row, col, rotationCount });
+    }
   };
 
   const confirmPlacement = () => {
     if (!pendingPlacement) return;
 
-    const { row, col, orientation: placementOrientation } = pendingPlacement;
+    const { row, col, rotationCount: placementRotation } = pendingPlacement;
+    const placementOrientation = ((placementRotation % 4) + 4) % 4;
     const legal = isMoveLegal(row, col, placementOrientation, rules, board);
 
     // Record move
@@ -183,7 +251,7 @@ const Game = ({ mode = 'solo', onExit }) => {
   const resetGame = () => {
     setBoard(createEmptyBoard());
     setRules(selectRules(0.25, 0.5));
-    setOrientation(0);
+    setRotationCount(0);
     setLastMove(null);
     setPendingPlacement(null);
     setCurrentPlayer(1);
@@ -237,21 +305,45 @@ const Game = ({ mode = 'solo', onExit }) => {
           )}
 
           <PlacementPreview
-            orientation={pendingPlacement ? pendingPlacement.orientation : orientation}
-            onRotate={rotateOrientation}
             stonesRemaining={getCurrentStones()}
           />
         </aside>
 
-        <div className="game-board-area">
+        <div className="game-board-area" ref={boardAreaRef}>
           <Board
             board={board}
             onCellClick={handleCellClick}
             previewOrientation={orientation}
             lastMove={lastMove}
-            disabled={gameOver || !!pendingPlacement}
+            disabled={gameOver}
             pendingPlacement={pendingPlacement}
           />
+
+          {/* Connecting line SVG overlay */}
+          {linePositions && (
+            <svg
+              className="connecting-line"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
+                overflow: 'visible',
+              }}
+            >
+              <line
+                x1={linePositions.line.x1}
+                y1={linePositions.line.y1}
+                x2={linePositions.line.x2}
+                y2={linePositions.line.y2}
+                stroke="rgba(255, 230, 0, 0.7)"
+                strokeWidth="2"
+                strokeDasharray="6 4"
+              />
+            </svg>
+          )}
 
           {/* Placement confirmation UI */}
           {pendingPlacement && (
@@ -263,13 +355,13 @@ const Game = ({ mode = 'solo', onExit }) => {
               >
                 ↺
               </button>
-              <div className="pending-piece-display">
+              <div className="pending-piece-display" ref={controlPanelPieceRef}>
                 <YinYangPiece
-                  orientation={pendingPlacement.orientation}
+                  rotationDegrees={pendingPlacement.rotationCount * 90}
                   size={50}
                 />
                 <span className="orientation-label">
-                  {getOrientationName(pendingPlacement.orientation)}
+                  {getOrientationName(((pendingPlacement.rotationCount % 4) + 4) % 4)}
                 </span>
               </div>
               <button
@@ -328,6 +420,7 @@ const Game = ({ mode = 'solo', onExit }) => {
                 <li key={i} className={move.legal ? 'valid' : 'invalid'}>
                   {mode === 'duel' && `P${move.player}: `}
                   {String.fromCharCode(65 + move.col)}{BOARD_SIZE - move.row}
+                  <span className="move-orientation">{getOrientationName(move.orientation)[0]}</span>
                   {' → '}
                   {move.legal ? '○' : '✕'}
                 </li>

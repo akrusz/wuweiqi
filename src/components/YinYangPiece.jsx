@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 const YinYangPiece = ({
   orientation = 0,
+  rotationDegrees = null, // Optional: use this for smooth continuous rotation
   size = 40,
   onClick,
   onRotate,
@@ -13,7 +14,8 @@ const YinYangPiece = ({
   result = null, // 'valid', 'invalid', or null
   className = '',
 }) => {
-  const rotation = orientation * 90;
+  // Use rotationDegrees if provided (for continuous rotation), otherwise compute from orientation
+  const rotation = rotationDegrees !== null ? rotationDegrees : orientation * 90;
 
   // Animation for valid/invalid feedback
   const getResultStyle = () => {
@@ -55,23 +57,26 @@ const YinYangPiece = ({
         width={size}
         height={size}
       >
-        {/* Outer circle */}
+        {/* Outer circle with border */}
         <circle cx="50" cy="50" r="48" fill="#1a1a1a" stroke="#333" strokeWidth="2" />
 
-        {/* White (yang) half - right side in default orientation */}
+        {/* White (yang) semicircle - right half of outer circle */}
         <path
-          d="M 50 2 A 48 48 0 0 1 50 98 A 24 24 0 0 1 50 50 A 24 24 0 0 0 50 2"
+          d="M 50 2 A 48 48 0 0 1 50 98"
           fill="#f5f5f0"
         />
 
-        {/* Black (yin) half - left side in default orientation */}
-        <path
-          d="M 50 2 A 48 48 0 0 0 50 98 A 24 24 0 0 0 50 50 A 24 24 0 0 1 50 2"
-          fill="#1a1a1a"
-        />
+        {/* White small circle at bottom (white's "head" bulging left) */}
+        <circle cx="50" cy="74" r="24" fill="#f5f5f0" />
 
-        {/* White dot in black (yin) section - this is the "eye" that indicates orientation */}
+        {/* Black small circle at top (black's "head" bulging right) */}
+        <circle cx="50" cy="26" r="24" fill="#1a1a1a" />
+
+        {/* White dot in black section (top) */}
         <circle cx="50" cy="26" r="8" fill="#f5f5f0" />
+
+        {/* Black dot in white section (bottom) */}
+        <circle cx="50" cy="74" r="8" fill="#1a1a1a" />
       </svg>
 
       {/* Result indicator */}
@@ -84,21 +89,12 @@ const YinYangPiece = ({
   );
 };
 
-// Preview piece for placement (follows cursor, can be rotated)
-export const PlacementPreview = ({ orientation, onRotate, stonesRemaining }) => {
+// Preview piece for placement (shows stones remaining)
+export const PlacementPreview = ({ stonesRemaining }) => {
   return (
     <div className="placement-preview">
-      <div className="preview-piece">
-        <YinYangPiece
-          orientation={orientation}
-          size={60}
-          interactive={true}
-          onRotate={onRotate}
-        />
-      </div>
       <div className="preview-info">
         <span className="stones-remaining">{stonesRemaining} stones</span>
-        <span className="rotate-hint">Right-click or R to rotate</span>
       </div>
     </div>
   );

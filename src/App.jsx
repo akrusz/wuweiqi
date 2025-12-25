@@ -11,15 +11,16 @@ function App() {
         <div className="logo">
           <svg viewBox="0 0 100 100" width="120" height="120" className="logo-svg">
             <circle cx="50" cy="50" r="48" fill="#1a1a1a" stroke="#444" strokeWidth="2" />
-            <path
-              d="M 50 2 A 48 48 0 0 1 50 98 A 24 24 0 0 1 50 50 A 24 24 0 0 0 50 2"
-              fill="#f5f5f0"
-            />
-            <path
-              d="M 50 2 A 48 48 0 0 0 50 98 A 24 24 0 0 0 50 50 A 24 24 0 0 1 50 2"
-              fill="#1a1a1a"
-            />
+            {/* White semicircle on right */}
+            <path d="M 50 2 A 48 48 0 0 1 50 98" fill="#f5f5f0" />
+            {/* White head at bottom */}
+            <circle cx="50" cy="74" r="24" fill="#f5f5f0" />
+            {/* Black head at top */}
+            <circle cx="50" cy="26" r="24" fill="#1a1a1a" />
+            {/* White dot in black */}
             <circle cx="50" cy="26" r="8" fill="#f5f5f0" />
+            {/* Black dot in white */}
+            <circle cx="50" cy="74" r="8" fill="#1a1a1a" />
           </svg>
         </div>
         <h1>无为棋</h1>

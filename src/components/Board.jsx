@@ -7,7 +7,7 @@ const Board = ({
   previewOrientation,
   lastMove, // { row, col, result: 'valid'|'invalid' }
   disabled = false,
-  pendingPlacement = null, // { row, col, orientation }
+  pendingPlacement = null, // { row, col, rotationCount }
 }) => {
   const renderCell = (row, col) => {
     const piece = board[row][col];
@@ -44,17 +44,17 @@ const Board = ({
         {/* Pending placement piece */}
         {isPending && (
           <YinYangPiece
-            orientation={pendingPlacement.orientation}
+            rotationDegrees={pendingPlacement.rotationCount * 90}
             size={36}
             className="pending-piece"
           />
         )}
 
-        {/* Hover preview for empty cells (only when not in pending mode) */}
-        {!piece && !disabled && !pendingPlacement && (
+        {/* Hover preview for empty cells */}
+        {!piece && !disabled && !isPending && (
           <div className="hover-preview">
             <YinYangPiece
-              orientation={previewOrientation}
+              rotationDegrees={pendingPlacement ? pendingPlacement.rotationCount * 90 : previewOrientation * 90}
               size={36}
               className="preview"
             />

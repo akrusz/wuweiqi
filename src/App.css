@@ -407,12 +407,22 @@
   color: var(--invalid);
 }
 
+.move-orientation {
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
 /* ==================== BOARD ==================== */
 .game-board-area {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 15px;
+  position: relative;
 }
 
 .board-container {
@@ -568,6 +578,8 @@
   background: var(--bg-medium);
   border-radius: 12px;
   animation: slideUp 0.2s ease;
+  box-shadow: 0 0 20px rgba(255, 230, 0, 0.4), 0 0 40px rgba(255, 200, 0, 0.2);
+  border: 2px solid rgba(255, 230, 0, 0.5);
 }
 
 .pending-piece-display {
@@ -666,7 +678,6 @@
 
 .yin-yang-piece.pending-piece {
   animation: pulse 1s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(201, 168, 108, 0.6));
 }
 
 /* ==================== YIN YANG PIECE ==================== */
@@ -912,14 +923,11 @@
 }
 
 @keyframes pulse {
-  0% {
-    transform: scale(1);
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 15px rgba(255, 230, 0, 0.8));
   }
   50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
+    filter: brightness(1.15) drop-shadow(0 0 25px rgba(255, 230, 0, 1));
   }
 }
 
