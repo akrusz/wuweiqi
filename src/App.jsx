@@ -24,7 +24,7 @@ function App() {
           </svg>
         </div>
         <h1>无为棋</h1>
-        <h2>Wuweiqi</h2>
+        <h2>WuWeiQi</h2>
         <p className="tagline">The rules that can be named are not the true rules</p>
       </div>
 
@@ -71,8 +71,10 @@ function App() {
       <section>
         <h2>Mechanics</h2>
         <ul>
-          <li><strong>Click</strong> on any intersection to place a stone</li>
-          <li><strong>Right-click</strong> or press <strong>R</strong> to rotate your piece</li>
+          <li><strong>Click</strong> on any intersection to select a placement</li>
+          <li><strong>Drag left/right</strong> on the board to rotate your piece before confirming</li>
+          <li>Use the <strong>rotation buttons</strong> or press <strong>R</strong> to rotate</li>
+          <li><strong>Confirm</strong> your placement, or click elsewhere to move it</li>
           <li>Valid moves show <span className="valid">○</span> and remain on the board</li>
           <li>Invalid moves show <span className="invalid">✕</span> and are removed</li>
         </ul>

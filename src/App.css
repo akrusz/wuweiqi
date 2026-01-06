@@ -112,6 +112,7 @@
   font-size: 1.8rem;
   width: 50px;
   text-align: center;
+  color: var(--accent);
 }
 
 .button-text {
@@ -347,6 +348,10 @@
   cursor: not-allowed;
 }
 
+.game-controls button.active {
+  border-color: var(--accent);
+}
+
 /* Hint Box */
 .hint-box {
   background: var(--bg-medium);
@@ -421,8 +426,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .board-container {
@@ -432,6 +437,7 @@
   box-shadow:
     0 10px 40px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
 }
 
 .board {
@@ -526,22 +532,81 @@
 /* Coordinate labels */
 .coord-label {
   position: absolute;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   color: var(--line-color);
-  font-weight: 600;
+  font-weight: 700;
   pointer-events: none;
+  text-shadow:
+    1px 1px 0 var(--board-color),
+    -1px -1px 0 var(--board-color),
+    1px -1px 0 var(--board-color),
+    -1px 1px 0 var(--board-color);
 }
 
 .row-label {
-  left: -18px;
+  left: 4px;
   top: 50%;
   transform: translateY(-50%);
 }
 
 .col-label {
-  bottom: -18px;
+  bottom: 0px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+/* Drag hint */
+.drag-hint {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85rem;
+  color: var(--accent);
+  white-space: nowrap;
+  animation: fadeIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drag-arrow {
+  font-size: 1.1rem;
+  animation: dragArrowPulse 1s ease-in-out infinite;
+}
+
+.drag-arrow:first-child {
+  animation-delay: 0s;
+}
+
+.drag-arrow:last-child {
+  animation-delay: 0.5s;
+}
+
+@keyframes dragArrowPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-3px);
+  }
+}
+
+.drag-arrow:last-child {
+  animation-name: dragArrowPulseRight;
+}
+
+@keyframes dragArrowPulseRight {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(3px);
+  }
 }
 
 /* Hover preview */
@@ -556,6 +621,29 @@
   opacity: 0.5;
 }
 
+/* Failed move indicator */
+.failed-move-indicator {
+  position: absolute;
+  z-index: 4;
+  opacity: 0.4;
+}
+
+.failed-move-indicator .yin-yang-piece {
+  filter: grayscale(0.7) brightness(0.8);
+}
+
+.failed-move-indicator::after {
+  content: '✕';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--invalid);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
 /* Orientation indicator */
 .orientation-indicator {
   color: var(--text-secondary);
@@ -568,16 +656,19 @@
 
 /* ==================== PLACEMENT CONFIRMATION UI ==================== */
 .placement-confirm-ui {
+  position: absolute;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 15px;
   flex-wrap: wrap;
-  margin-top: 15px;
   padding: 15px;
   background: var(--bg-medium);
   border-radius: 12px;
-  animation: slideUp 0.2s ease;
+  animation: fadeIn 0.2s ease;
   box-shadow: 0 0 20px rgba(255, 230, 0, 0.4), 0 0 40px rgba(255, 200, 0, 0.2);
   border: 2px solid rgba(255, 230, 0, 0.5);
 }
@@ -678,6 +769,38 @@
 
 .yin-yang-piece.pending-piece {
   animation: pulse 1s ease-in-out infinite;
+}
+
+/* Pending piece wrapper with rotation hints */
+.pending-piece-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rotate-hint-arrow {
+  position: absolute;
+  font-size: 1.4rem;
+  color: #444;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.rotate-hint-arrow.left {
+  right: 100%;
+  margin-right: 2px;
+}
+
+.rotate-hint-arrow.right {
+  left: 100%;
+  margin-left: 2px;
+}
+
+.pending-piece-wrapper:hover .rotate-hint-arrow,
+.board-cell.pending:hover .rotate-hint-arrow {
+  opacity: 1;
 }
 
 /* ==================== YIN YANG PIECE ==================== */
@@ -922,6 +1045,20 @@
   }
 }
 
+@keyframes blowOff {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--blow-x, 0px), var(--blow-y, 60px));
+    opacity: 0;
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     filter: brightness(1) drop-shadow(0 0 15px rgba(255, 230, 0, 0.8));
@@ -976,7 +1113,25 @@
   }
 
   .board-container {
-    padding: 15px;
+    padding: 20px;
+  }
+
+  .coord-label {
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .row-label {
+    left: 2px;
+  }
+
+  .col-label {
+    bottom: 2px;
+  }
+
+  .drag-hint {
+    font-size: 0.75rem;
+    bottom: -25px;
   }
 
   .menu h1 {

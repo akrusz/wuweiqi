@@ -13,6 +13,7 @@ const YinYangPiece = ({
   placed = false,
   result = null, // 'valid', 'invalid', or null
   className = '',
+  blowOffDirection = null, // { x, y } for blow-off animation direction
 }) => {
   // Use rotationDegrees if provided (for continuous rotation), otherwise compute from orientation
   const rotation = rotationDegrees !== null ? rotationDegrees : orientation * 90;
@@ -21,8 +22,7 @@ const YinYangPiece = ({
   const getResultStyle = () => {
     if (result === 'invalid') {
       return {
-        animation: 'shake 0.5s ease-in-out',
-        opacity: 0.5,
+        animation: 'blowOff 0.6s ease-out forwards',
       };
     }
     if (result === 'valid') {
@@ -33,16 +33,22 @@ const YinYangPiece = ({
     return {};
   };
 
+  const resultStyle = getResultStyle();
+  const hasAnimation = result === 'invalid';
+
   return (
     <div
       className={`yin-yang-piece ${className} ${interactive ? 'interactive' : ''} ${placed ? 'placed' : ''}`}
       style={{
+        '--rotation': `${rotation}deg`,
+        '--blow-x': blowOffDirection ? `${blowOffDirection.x}px` : '0px',
+        '--blow-y': blowOffDirection ? `${blowOffDirection.y}px` : '120px',
         width: size,
         height: size,
-        transform: `rotate(${rotation}deg)`,
-        transition: 'transform 0.2s ease',
+        transform: hasAnimation ? undefined : `rotate(${rotation}deg)`,
+        transition: hasAnimation ? undefined : 'transform 0.2s ease',
         cursor: interactive ? 'pointer' : 'default',
-        ...getResultStyle(),
+        ...resultStyle,
       }}
       onClick={onClick}
       onContextMenu={(e) => {

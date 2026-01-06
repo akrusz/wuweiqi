@@ -42,6 +42,7 @@ export const ALL_RULES = [
     description: 'Stones in even-numbered rows are illegal',
     check: (row, col, orientation, board) => row % 2 === 0,
     weight: 1,
+    boringAlone: true, // Allows entire rows - needs companion rule
   },
   {
     id: 'odd_row',
@@ -49,6 +50,7 @@ export const ALL_RULES = [
     description: 'Stones in odd-numbered rows are illegal',
     check: (row, col, orientation, board) => row % 2 === 1,
     weight: 1,
+    boringAlone: true,
   },
   {
     id: 'even_col',
@@ -56,6 +58,7 @@ export const ALL_RULES = [
     description: 'Stones in even-numbered columns are illegal',
     check: (row, col, orientation, board) => col % 2 === 0,
     weight: 1,
+    boringAlone: true,
   },
   {
     id: 'odd_col',
@@ -63,6 +66,7 @@ export const ALL_RULES = [
     description: 'Stones in odd-numbered columns are illegal',
     check: (row, col, orientation, board) => col % 2 === 1,
     weight: 1,
+    boringAlone: true,
   },
 
   // Edge/corner rules
@@ -95,6 +99,7 @@ export const ALL_RULES = [
     description: 'Stones in top half (rows 0-3) are illegal',
     check: (row, col, orientation, board) => row <= 3,
     weight: 1,
+    boringAlone: true, // Allows entire half of board
   },
   {
     id: 'bottom_half',
@@ -102,6 +107,7 @@ export const ALL_RULES = [
     description: 'Stones in bottom half (rows 5-8) are illegal',
     check: (row, col, orientation, board) => row >= 5,
     weight: 1,
+    boringAlone: true,
   },
   {
     id: 'left_half',
@@ -109,6 +115,7 @@ export const ALL_RULES = [
     description: 'Stones in left half (cols 0-3) are illegal',
     check: (row, col, orientation, board) => col <= 3,
     weight: 1,
+    boringAlone: true,
   },
   {
     id: 'right_half',
@@ -116,6 +123,7 @@ export const ALL_RULES = [
     description: 'Stones in right half (cols 5-8) are illegal',
     check: (row, col, orientation, board) => col >= 5,
     weight: 1,
+    boringAlone: true,
   },
 
   // Diagonal rules
@@ -340,13 +348,69 @@ const calculateLegalPercentage = (rules) => {
   return legalCount / (BOARD_SIZE * BOARD_SIZE);
 };
 
+// Check if a rule set creates boring patterns (large contiguous legal areas)
+const isBoringRuleSet = (rules) => {
+  if (rules.length === 0) return true;
+
+  // If only one rule and it's marked as boring alone, reject
+  if (rules.length === 1 && rules[0].boringAlone) {
+    return true;
+  }
+
+  // If we have 2 rules but both are boring row/col rules of the same type, still boring
+  // e.g., even_row + top_half still allows entire rows in the bottom half
+  if (rules.length === 2) {
+    const boringRules = rules.filter(r => r.boringAlone);
+    if (boringRules.length === 2) {
+      // Check if both constrain only rows or only columns
+      const rowRules = ['even_row', 'odd_row', 'top_half', 'bottom_half'];
+      const colRules = ['even_col', 'odd_col', 'left_half', 'right_half'];
+      const bothRowBased = boringRules.every(r => rowRules.includes(r.id));
+      const bothColBased = boringRules.every(r => colRules.includes(r.id));
+      if (bothRowBased || bothColBased) {
+        return true;
+      }
+    }
+  }
+
+  // Check for large contiguous legal areas using flood fill
+  const emptyBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+  const legalMap = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(false));
+
+  // Mark all legal positions
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      for (let orientation = 0; orientation < 4; orientation++) {
+        const isIllegal = rules.some(rule => rule.check(row, col, orientation, emptyBoard));
+        if (!isIllegal) {
+          legalMap[row][col] = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Check for full rows or columns of legal moves
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    // Check row i
+    const rowAllLegal = legalMap[i].every(cell => cell);
+    if (rowAllLegal) return true;
+
+    // Check column i
+    const colAllLegal = legalMap.every(row => row[i]);
+    if (colAllLegal) return true;
+  }
+
+  return false;
+};
+
 // Select random rules that achieve target legality
 export const selectRules = (targetMin = 0.25, targetMax = 0.5, maxAttempts = 100) => {
   const incompatible = getIncompatiblePairs();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    // Randomly select 1-4 rules
-    const numRules = Math.floor(Math.random() * 4) + 1;
+    // Randomly select 2-4 rules (minimum 2 to avoid boring single-rule games)
+    const numRules = Math.floor(Math.random() * 3) + 2;
     const shuffled = [...ALL_RULES].sort(() => Math.random() - 0.5);
     const selected = [];
 
@@ -365,6 +429,11 @@ export const selectRules = (targetMin = 0.25, targetMax = 0.5, maxAttempts = 100
       }
     }
 
+    // Skip boring rule combinations
+    if (isBoringRuleSet(selected)) {
+      continue;
+    }
+
     const legalPct = calculateLegalPercentage(selected);
 
     if (legalPct >= targetMin && legalPct <= targetMax) {
@@ -372,8 +441,17 @@ export const selectRules = (targetMin = 0.25, targetMax = 0.5, maxAttempts = 100
     }
   }
 
-  // Fallback: return a simple rule set
-  return [ALL_RULES.find(r => r.id === 'sum_even')];
+  // Fallback: return a random interesting combination
+  const fallbacks = [
+    ['sum_even', 'north_forbidden'],
+    ['sum_odd', 'east_forbidden'],
+    ['edge_forbidden', 'south_forbidden'],
+    ['sum_even', 'west_forbidden', 'corner_forbidden'],
+    ['near_center', 'north_forbidden'],
+    ['far_from_center', 'east_forbidden'],
+  ];
+  const chosen = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  return chosen.map(id => ALL_RULES.find(r => r.id === id));
 };
 
 // Check if a move is legal given the current rules and board state
